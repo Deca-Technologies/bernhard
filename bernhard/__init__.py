@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -
 
 import logging
+
 log = logging.getLogger(__name__)
 
 import pkg_resources
@@ -10,11 +11,11 @@ import struct
 import sys
 
 try:
-    PROTOBUF_VERSION = pkg_resources.get_distribution('protobuf').version
+    PROTOBUF_VERSION = pkg_resources.get_distribution("protobuf").version
 except pkg_resources.DistributionNotFound:
-    PROTOBUF_VERSION = 'unknown'
+    PROTOBUF_VERSION = "unknown"
 
-if PROTOBUF_VERSION.startswith('3'):
+if PROTOBUF_VERSION.startswith("3"):
     from . import proto_pb2 as pb
 else:
     from . import pb
@@ -23,6 +24,7 @@ else:
 string_type = str
 if sys.version_info[1] < 3:
     string_type = basestring
+
 
 class TransportError(Exception):
     def __init__(self, msg):
@@ -63,7 +65,9 @@ class TCPTransport(object):
         while len(buffer) < size:
             data = sock.recv(size - len(buffer))
             if not data:
-                log.debug("Expected to read %s bytes, but read %s bytes", size, len(buffer))
+                log.debug(
+                    "Expected to read %s bytes, but read %s bytes", size, len(buffer)
+                )
                 break
             buffer += data
         return buffer
@@ -72,12 +76,12 @@ class TCPTransport(object):
         try:
             # Tx length header and message
             log.debug("Sending event to Riemann")
-            self.sock.sendall(struct.pack('!I', len(message)) + message)
+            self.sock.sendall(struct.pack("!I", len(message)) + message)
 
             # Rx length header
             log.debug("Reading Riemann Response Length Header")
             response = self.read_exactly(self.sock, 4)
-            rxlen = struct.unpack('!I', response)[0]
+            rxlen = struct.unpack("!I", response)[0]
             log.debug("Header Length Is: %d", rxlen)
 
             # Rx entire response
@@ -96,12 +100,14 @@ class SSLTransport(TCPTransport):
 
         TCPTransport.__init__(self, host, port)
 
-        self.sock = ssl.wrap_socket(self.sock,
-                                    keyfile=keyfile,
-                                    certfile=certfile,
-                                    cert_reqs=ssl.CERT_REQUIRED,
-                                    ssl_version=ssl.PROTOCOL_TLSv1,
-                                    ca_certs=ca_certs)
+        self.sock = ssl.wrap_socket(
+            self.sock,
+            keyfile=keyfile,
+            certfile=certfile,
+            cert_reqs=ssl.CERT_REQUIRED,
+            ssl_version=ssl.PROTOCOL_TLSv1,
+            ca_certs=ca_certs,
+        )
 
 
 class UDPTransport(object):
@@ -147,23 +153,23 @@ class Event(object):
             self.event = pb.Event()
 
     def __getattr__(self, name):
-        if name == 'metric':
-            name = 'metric_f'
+        if name == "metric":
+            name = "metric_f"
         if name in set(f.name for f in pb.Event.DESCRIPTOR.fields):
             return getattr(self.event, name)
 
     def __setattr__(self, name, value):
-        if name == 'metric':
-            name = 'metric_f'
-        if name == 'tags':
+        if name == "metric":
+            name = "metric_f"
+        if name == "tags":
             self.event.tags.extend(value)
-        elif name == 'attributes':
+        elif name == "attributes":
             if type(value) == dict:
                 for key, val in value.items():
                     a = self.event.attributes.add()
                     a.key = key
                     if isinstance(val, bytes):
-                        val = val.decode('utf-8')
+                        val = val.decode("utf-8")
                     elif not isinstance(val, string_type):
                         val = string_type(val)
                     a.value = string_type(val)
@@ -214,7 +220,7 @@ class Message(object):
 
 
 class Client(object):
-    def __init__(self, host='127.0.0.1', port=5555, transport=TCPTransport):
+    def __init__(self, host="127.0.0.1", port=5555, transport=TCPTransport):
         self.host = host
         self.port = port
         self.transport = transport
@@ -254,8 +260,9 @@ class Client(object):
 
 
 class SSLClient(Client):
-    def __init__(self, host='127.0.0.1', port=5554,
-                 keyfile=None, certfile=None, ca_certs=None):
+    def __init__(
+        self, host="127.0.0.1", port=5554, keyfile=None, certfile=None, ca_certs=None
+    ):
         Client.__init__(self, host=host, port=port, transport=SSLTransport)
 
         self.keyfile = keyfile
@@ -263,5 +270,6 @@ class SSLClient(Client):
         self.ca_certs = ca_certs
 
     def connect(self):
-        self.connection = self.transport(self.host, self.port, self.keyfile,
-                                         self.certfile, self.ca_certs)
+        self.connection = self.transport(
+            self.host, self.port, self.keyfile, self.certfile, self.ca_certs
+        )
