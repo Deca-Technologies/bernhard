@@ -15,7 +15,7 @@ try:
 except pkg_resources.DistributionNotFound:
     PROTOBUF_VERSION = "unknown"
 
-if PROTOBUF_VERSION.startswith("3"):
+if PROTOBUF_VERSION.startswith(("3", "4")):
     from . import proto_pb2 as pb
 else:
     from . import pb
